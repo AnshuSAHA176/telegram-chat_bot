@@ -6,9 +6,11 @@ import platform
 import nest_asyncio
 from groq import Groq
 import reaction
+# JUST PAST YOUR BOT_TOKEN
+BOT_TOKEN = "BOT_TOKEN"
 
-BOT_TOKEN = ""
-GROQ_API_KEY = ""
+# HERE JUST PAST YOUR GROQ API
+GROQ_API_KEY = "GROQ_API"
 
 # Initialize Groq client
 groq_client = Groq(api_key=GROQ_API_KEY)
@@ -140,4 +142,5 @@ if __name__ == "__main__":
     asyncio.get_event_loop().run_until_complete(set_manu(app))
 
     print("Bot is running...")
+
     app.run_polling()
