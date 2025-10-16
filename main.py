@@ -6,14 +6,15 @@ import platform
 import nest_asyncio
 from groq import Groq
 import reaction
-# JUST PASTE YOUR BOT_TOKEN
-BOT_TOKEN = "BOT_TOKEN"
+from collections import defaultdict  
 
-# HERE JUST PASTE YOUR GROQ API
+BOT_TOKEN = "BOT_TOKEN"
 GROQ_API_KEY = "GROQ_API"
 
 # Initialize Groq client
 groq_client = Groq(api_key=GROQ_API_KEY)
+conversation_history=defaultdict(list)
+MAX_HISTORY=100
 
 # Available models
 AVAILABLE_MODELS = {
@@ -27,17 +28,18 @@ if platform.system() == "Windows":
 # start command
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
     user_name = update.effective_user.first_name
-    welcome_txt = f"""👋 Welcome, {user_name}!
+    conversation_history[user_id] = []
+    welcome_txt = f"""HELLO 👋, {user_name}!
 
 I'm your AI assistant powered by cutting-edge language models. I can help you with:
 
-🤖 **AI Conversations** - Ask me anything and get intelligent responses
-😂 **Jokes** - Brighten your day with random humor
-📖 **Stories** - Enjoy creative tales
+🤖 AI Conversations — Ask me anything and get intelligent responses
+😂 Jokes — Brighten your day with random humor
+📖 Stories — Enjoy creative tales
 
-                 **Quick Start:**
-
+⚡ Quick Start:
 • Just type any message and I'll respond with AI
 • Use /help for all available commands
 
@@ -56,23 +58,27 @@ Let's get started! What would you like to talk about?"""
 
 # help command
 async def help(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    help_text = """📋 **Available Commands:**
+    help_text = """📋 AVAILABLE COMMANDS:
+/start — Start the bot
+/help — Show this help message
 
-/start - Start the bot
-/help - Show this help message
-
-💬 **How to Use:**
+💬 HOW TO USE:
 Just send me any message and I'll respond with AI!
-
-Ask me about anything - I'm here to help!"""
+Ask me about anything — I'm here to help!"""
     message = await update.message.reply_text(help_text)
     try:
         await asyncio.sleep(0.5)
         await message.set_reaction(reaction=[ReactionTypeEmoji(emoji="❤️")])
     except Exception as e:
         print(f"Reaction error: {e}")
+async def clear(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    conversation_history[user_id] = []
+    clear_text = "✅ Conversation history cleared! Let's start fresh."
+    # ... send message
 
 async def ai_response(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
     user_message = update.message.text
     print(f"User message: {user_message}")
     
@@ -91,18 +97,29 @@ async def ai_response(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # this for ai 
             try:
                 print("Calling Groq AI...")
+                
+                # Add user message to history
+                conversation_history[user_id].append({
+                    "role": "user",
+                    "content": user_message
+                })
+                
+                # Keep only last MAX_HISTORY messages
+                if len(conversation_history[user_id]) > MAX_HISTORY:
+                    conversation_history[user_id] = conversation_history[user_id][-MAX_HISTORY:]
+                
+                # Send entire conversation history to AI
                 chat_completion = groq_client.chat.completions.create(
-                    messages=[
-                        {
-                            "role": "user",
-                            "content": user_message,
-                        }
-                    ],
+                    messages=conversation_history[user_id],
                     model=AVAILABLE_MODELS[CURRENT_MODEL],
                 )
                 answer = chat_completion.choices[0].message.content
-                reaction_emoji = reaction.reaction()
-                print(f"AI Response: {answer}")
+                
+                # Add AI response to history
+                conversation_history[user_id].append({
+                    "role": "assistant",
+                    "content": answer
+                })
             except Exception as ai_error:
                 print(f"AI Error: {ai_error}")
                 answer = "I didn't understand. Try asking something else!"
@@ -142,6 +159,8 @@ if __name__ == "__main__":
     asyncio.get_event_loop().run_until_complete(set_manu(app))
 
     print("Bot is running...")
+    app.run_polling()
 
     app.run_polling()
+
 
