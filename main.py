@@ -3,18 +3,21 @@ import my_jokes_and_story
 from telegram import Update, ReactionTypeEmoji, BotCommand
 import asyncio
 import platform
-import nest_asyncio
+import os
 from groq import Groq
 import reaction
-from collections import defaultdict  
+from collections import defaultdict
 
-BOT_TOKEN = "BOT_TOKEN"
-GROQ_API_KEY = "GROQ_API"
+# Get tokens from environment variables
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 # Initialize Groq client
 groq_client = Groq(api_key=GROQ_API_KEY)
-conversation_history=defaultdict(list)
-MAX_HISTORY=100
+
+# Conversation history storage - keeps last 10 messages per user
+conversation_history = defaultdict(list)
+MAX_HISTORY = 10
 
 # Available models
 AVAILABLE_MODELS = {
@@ -25,25 +28,22 @@ CURRENT_MODEL = "llama"
 
 if platform.system() == "Windows":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-# start command
 
+# start command
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     user_name = update.effective_user.first_name
+    
+    # Clear conversation history on start
     conversation_history[user_id] = []
-    welcome_txt = f"""HELLO 👋, {user_name}!
+    
+    welcome_txt = f"""Hello, CA. {user_name}! 👋
 
-I'm your AI assistant powered by cutting-edge language models. I can help you with:
+Nice To Meet You, My Dear Friend! 🌫️
 
-🤖 AI Conversations — Ask me anything and get intelligent responses
-😂 Jokes — Brighten your day with random humor
-📖 Stories — Enjoy creative tales
+I'm Powerful Bot, You Can Use Me As A Auto-filter... I Can Provide You Movies, Web Series And TV Shows That I Have indexed !!
 
-⚡ Quick Start:
-• Just type any message and I'll respond with AI
-• Use /help for all available commands
-
-Let's get started! What would you like to talk about?"""
+<b>|🔥 Powered By » 「 @OTTProvider 」 "</b>"""
     
     photo_url = "https://graph.org/vTelegraphBot-07-28-35"
     
@@ -51,7 +51,7 @@ Let's get started! What would you like to talk about?"""
     
     try:
         await asyncio.sleep(0.5)
-        random_rec=reaction.reaction()
+        random_rec = reaction.reaction()
         await message.set_reaction(reaction=[ReactionTypeEmoji(emoji=random_rec)])
     except Exception as e:
         print(f"Reaction error: {e}")
@@ -61,6 +61,7 @@ async def help(update: Update, context: ContextTypes.DEFAULT_TYPE):
     help_text = """📋 AVAILABLE COMMANDS:
 /start — Start the bot
 /help — Show this help message
+/clear — Clear conversation history
 
 💬 HOW TO USE:
 Just send me any message and I'll respond with AI!
@@ -71,11 +72,19 @@ Ask me about anything — I'm here to help!"""
         await message.set_reaction(reaction=[ReactionTypeEmoji(emoji="❤️")])
     except Exception as e:
         print(f"Reaction error: {e}")
+
+# clear history command
 async def clear(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     conversation_history[user_id] = []
+    
     clear_text = "✅ Conversation history cleared! Let's start fresh."
-    # ... send message
+    message = await update.message.reply_text(clear_text)
+    try:
+        await asyncio.sleep(0.5)
+        await message.set_reaction(reaction=[ReactionTypeEmoji(emoji="🗑️")])
+    except Exception as e:
+        print(f"Reaction error: {e}")
 
 async def ai_response(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -85,16 +94,14 @@ async def ai_response(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         answer = None
         reaction_emoji = "👍"
-        # you can even import pyjoke
+        
         if "joke" in user_message.lower():
             answer = my_jokes_and_story.get_my_jokes()
             reaction_emoji = reaction.reaction()
-        # for short story
         elif "story" in user_message.lower():
             answer = my_jokes_and_story.story()
-            reaction_emoji =reaction.reaction()
+            reaction_emoji = reaction.reaction()
         else:
-            # this for ai 
             try:
                 print("Calling Groq AI...")
                 
@@ -120,11 +127,13 @@ async def ai_response(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     "role": "assistant",
                     "content": answer
                 })
+                
+                reaction_emoji = reaction.reaction()
+                print(f"AI Response: {answer}")
             except Exception as ai_error:
                 print(f"AI Error: {ai_error}")
                 answer = "I didn't understand. Try asking something else!"
                 reaction_emoji = reaction.reaction()
-        
         
         try:
             await asyncio.sleep(0.3)
@@ -137,30 +146,30 @@ async def ai_response(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
     except Exception as e:
         print(f"Error: {e}")
-# for ser manu feature in the chat_bot
+
+# set menu feature
 async def set_manu(app):
     commands = [
-        BotCommand("start", "start the bot"),
+        BotCommand("start", "Start the bot"),
         BotCommand("help", "Show help information"),
+        BotCommand("clear", "Clear conversation history"),
     ]
     await app.bot.set_my_commands(commands)
 
 if __name__ == "__main__":
-    # main funtion
     print("bot start.....")
+    
+    # Validate required environment variables
+    if not BOT_TOKEN or not GROQ_API_KEY:
+        print("ERROR: BOT_TOKEN or GROQ_API_KEY not set!")
+        exit(1)
+    
     app = Application.builder().token(BOT_TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help))
+    app.add_handler(CommandHandler("clear", clear))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, ai_response))
-
-    # set menu asynchronously
-    nest_asyncio.apply()
-    asyncio.get_event_loop().run_until_complete(set_manu(app))
 
     print("Bot is running...")
     app.run_polling()
-
-    app.run_polling()
-
-
