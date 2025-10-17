@@ -160,10 +160,7 @@ if __name__ == "__main__":
     print("bot start.....")
     
     # Validate required environment variables
-    if not BOT_TOKEN or not GROQ_API_KEY:
-        print("ERROR: BOT_TOKEN or GROQ_API_KEY not set!")
-        exit(1)
-    
+   
     app = Application.builder().token(BOT_TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
@@ -173,3 +170,4 @@ if __name__ == "__main__":
 
     print("Bot is running...")
     app.run_polling()
+
