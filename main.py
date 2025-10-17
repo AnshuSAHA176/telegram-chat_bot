@@ -174,7 +174,7 @@ async def ai_response(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Add reaction to user's message
         try:
             await asyncio.sleep(0.3)
-            await update.message.set_reaction(reaction=[ReactionTypeEmoji(emoji=reaction_emoji)])
+            await update.message.set_reaction(reaction=[ReactionTypeEmoji(emoji=reaction.reaction())])
         except Exception as e:
             print(f"Reaction error: {e}")
 
@@ -225,3 +225,4 @@ if __name__ == "__main__":
 
     print("Bot is running...")
     app.run_polling()
+
